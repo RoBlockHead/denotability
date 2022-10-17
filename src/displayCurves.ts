@@ -6,8 +6,8 @@ const deplot = new Deplot('Plotly');
 export const displayCurvePlot = (curves: Curve[]) => {
     const data: Plotly.Data[] = [];
     curves.forEach((curve) => {
-        let xCoords: number[] = [];
-        let yCoords: number[] = [];
+        const xCoords: number[] = [];
+        const yCoords: number[] = [];
         curve.points.forEach((coord) => {
             xCoords.push(coord.x);
             yCoords.push(coord.y);
