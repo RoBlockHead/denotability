@@ -8,6 +8,16 @@ export type Curve = {
     points: Coordinate[]
 };
 
+const numObjToArr = (input: {[key: string]: T}): T[] => {
+	// assumes keys are ascending numbers
+	let keys = Object.keys(input);
+	keys = keys.sort((a, b) => {return a-b});
+	const output: T[] = [];
+	for(const key of keys) {
+		output.push(input[key]);
+	}
+	return output;
+}
 const bytesToPoints = (bytes: Uint8Array): number[] => {
     const points: number[] = [];
     for(let i = 0; i < bytes.length/4; i++) {
@@ -56,8 +66,9 @@ for (const entry of sessionData.$objects) {
     if(typeof entry !== "object") continue;
     if(!entry.curvespoints) continue;
     if(!entry.curvesnumpoints) continue;
-    pointBytes = Object.values(entry.curvespoints);
-    numPointBytes = Object.values(entry.curvesnumpoints);
+    // numObjToArr ensures that we get these in order. thanks @turbio for pointing that out
+	pointBytes = numObjToArr(entry.curvespoints);
+    numPointBytes = numObjToArr(entry.curvesnumpoints);
 }
 const points = bytesToPoints(Uint8Array.from(pointBytes));
 const numPoints = bytesToNumPoints(Uint8Array.from(numPointBytes));
