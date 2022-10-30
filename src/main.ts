@@ -27,7 +27,7 @@ for await (const dirEntry of Deno.readDir("./")) {
 }
 if(found) Deno.remove("./tmpOut", {recursive: true});
 
-const destPath = await unZipFromFile("./resources/oct20.note", "./tmpOut");
+const destPath = await unZipFromFile("./resources/testnote.note", "./tmpOut");
 if(typeof destPath !== 'string') Deno.exit();
 let innerName = "";
 for await(const dirEntry of Deno.readDir(destPath)) {
@@ -37,9 +37,10 @@ for await(const dirEntry of Deno.readDir(destPath)) {
 
 const sessionBPList = await Deno.readFile(`${destPath}/${innerName}/Session.plist`);
 const sessionObject = parseBuffer(sessionBPList);
+sessionObject
 const curves = curvesFromSessionData(sessionObject as SessionData);
 const svg = generateSvg(curves);
-const pdf = await generatePdf(curves);
+// const pdf = await generatePdf(curves);
 Deno.writeTextFile("./out.svg", svg);
-Deno.writeFile("./out.pdf", pdf);
+// Deno.writeFile("./out.pdf", pdf);
 Deno.writeTextFile("./tmpOut/Session.json", JSON.stringify(sessionObject, null, "\t"));
