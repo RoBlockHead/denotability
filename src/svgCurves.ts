@@ -1,5 +1,7 @@
-import curves from "../tmpOut/curves.json" assert {type: "json"};
+import type { Curve } from "./types.ts";
+// import curveJson from "../tmpOut/curves.json" assert {type: "json"};
 
+// const curves: {curves: Curve[]} = curveJson;
 // const svgWin = createSVGWindow();
 // const SVG = svgMod(svgWin);
 // const document = svgWin.document;
@@ -7,12 +9,9 @@ import curves from "../tmpOut/curves.json" assert {type: "json"};
 // const draw = SVG(document.documentElement);
 // // draw.rect(667.79998779296875, 11*(667.79998779296875/8.5));
 // console.log(draw);
-const width = 667.79998779296875;
-const height = 11*(667.79998779296875/8.5);
 
-let polyLineElements: string[] = [];
 
-const generatePathString = (curvePoints: {x: number, y: number}[]) => {
+export const generatePathString = (curvePoints: {x: number, y: number}[]) => {
     let pathString = "";
     pathString += `M${curvePoints[0].x} ${curvePoints[0].y}`;
     let lastSeg = "C";
@@ -21,7 +20,7 @@ const generatePathString = (curvePoints: {x: number, y: number}[]) => {
     let inLastSeg = false;
     curvePoints.forEach(({x, y}, ind) => {
         if(ind == 0) return;
-        if(ind == 1) pathString += "C "
+        if(ind == 1) pathString += " C "
         if(ind == curvePoints.length - 4 && lastSeg == "SS") {
             inLastSeg = true;
             pathString += "S "
@@ -40,18 +39,25 @@ const generatePathString = (curvePoints: {x: number, y: number}[]) => {
     });
     return pathString;
 }
-curves.curves.forEach((val) => {
-    const curvePoints: number[][] = [];
-    let pointsString = "";
-    val.points.forEach(({x, y}) => {
-        pointsString += `${x} ${y}, `
+
+export const generateSvg = (curves: Curve[]): string => {
+    const width = 667.79998779296875;
+    const height = 11*(667.79998779296875/8.5);
+
+    let polyLineElements: string[] = [];
+    curves.forEach((val) => {
+        const curvePoints: number[][] = [];
+        let pointsString = "";
+        val.points.forEach(({x, y}) => {
+            pointsString += `${x} ${y}, `
+        });
+        // polyLineElements.push(`<polyline points="${pointsString}" fill="none" stroke="${val.color}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
+        polyLineElements.push(`<path d="${generatePathString(val.points)}"  fill="none" stroke="${val.color.substring(0,7)}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
+    
     });
-    // polyLineElements.push(`<polyline points="${pointsString}" fill="none" stroke="${val.color}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
-    polyLineElements.push(`<path d="${generatePathString(val.points)}"  fill="none" stroke="${val.color.substring(0,7)}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
-
-});
-
-const svgText = `<svg viewbox="0 0 ${height} ${width}" xmlns="http://www.w3.org/2000/svg">
-${polyLineElements.join("\n")}
-</svg>`
-Deno.writeTextFile("out.svg", svgText);
+    
+    const svgText = `<svg viewbox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    ${polyLineElements.join("\n")}
+    </svg>`
+    return svgText;
+}

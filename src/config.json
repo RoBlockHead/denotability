@@ -1,0 +1,8 @@
+{
+    "persistTempDir": true,
+    "currentTempDir": "",
+    "defaultInput": "resources/oct20.note",
+    "outputOptions": {
+        "svgDir": "out/"
+    }
+}
