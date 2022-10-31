@@ -23,28 +23,82 @@ console.log("Notability Viewer Alpha 0.1");
 // Deno.writeTextFile("./tmpOut/metadata.json", JSON.stringify(await bplistParse(`${destPath}/${innerName}/metadata.plist`), null, "\t"));
 // Deno.mkdir("./tmpOut/HandwritingIndex/");
 // Deno.writeTextFile("./tmpOut/HandwritingIndex/index.json", JSON.stringify(await bplistParse(`${destPath}/${innerName}/HandwritingIndex/index.plist`), null, "\t"));
-let found = false;
-for await (const dirEntry of Deno.readDir("./")) {
-    if(dirEntry.name == "tmpOut") found = true;
+async function removeTempDir() {
+    let tmpOutFound = false;
+    for await (const dirEntry of Deno.readDir("./")) {
+        if(dirEntry.name == "tmpOut") tmpOutFound = true;
+    }
+    if(tmpOutFound) Deno.remove("./tmpOut", {recursive: true});
 }
-if(found) Deno.remove("./tmpOut", {recursive: true});
+const exists = async (filename: string): Promise<boolean> => {
+    try {
+      await Deno.stat(filename);
+      // successful, file or directory must exist
+      return true;
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        // file or directory does not exist
+        return false;
+      } else {
+        // unexpected error, maybe permissions, pass it along
+        throw error;
+      }
+    }
+  };
+  
+const MAX_FILE_SIZE = 300 * 1000 * 1000; // 300 Megabytes
+async function main(args: string[]) {
+    try {
+        const flags = parseFlags(args, {
+            boolean: ["help", "pdf", "svg", "overwrite", "r", "persistTemp"],
+            string: ["pdfOut", "svgOut"],
+            default: { pdf: true, svg: true }
+        });
+        const inputPath = flags._[0]
+        if(flags.pdf && !flags.pdfOut) throw new Error("specify the path for the outputted PDF file");
+        if(flags.svg && !flags.svgOut) throw new Error("specify the path for the outputted SVG file");
 
-const destPath = await unZipFromFile("./resources/oct20.note", "./tmpOut");
-if(typeof destPath !== 'string') Deno.exit();
-let innerName = "";
-for await(const dirEntry of Deno.readDir(destPath)) {
-    console.log(dirEntry);
-    innerName = dirEntry.name;
+        if(flags._.length !== 1 || typeof inputPath == "number") throw new Error("need exactly one string argument containing a path.");
+        if(flags.pdf && await exists(flags.pdfOut || "") && !flags.overwrite) throw new Error(`${flags.pdfOut} already exists! Overwrite with "--overwrite"`);
+        if(flags.svg && await exists(flags.svgOut || "") && !flags.overwrite) throw new Error(`${flags.svgOut} already exists! Overwrite with "--overwrite"`);
+        let fileStat = await Deno.stat(inputPath)
+        if(fileStat.size > MAX_FILE_SIZE) throw new Error("provided file is larger than the maximum file size of 300Mb.");
+        if(fileStat.isDirectory) throw new Error("provided file is a directory, not a .note file.");
+        if(!inputPath.endsWith(".note")) throw new Error(`${inputPath} is not a .note file!`);
+
+        await removeTempDir();
+
+        const destPath = await unZipFromFile(inputPath, "./tmpOut");
+        if(destPath == false) throw new Error("Error while decompressing " + inputPath);
+
+        // this section assumes that there is only one directory within the note file's zipping. If there is more than one, this whole thing will break
+        let innerName = "";
+        for await(const dirEntry of Deno.readDir(destPath)) {
+            console.log(dirEntry);
+            innerName = dirEntry.name;
+        }
+
+        const sessionBPList = await Deno.readFile(`${destPath}/${innerName}/Session.plist`);
+        const sessionObject = parseBuffer(sessionBPList);
+        const session = resolveObjects(sessionObject) as NoteTakingSession;
+        // const curves = curvesFromSessionObject(sessionObject as SessionData);
+        const curves = curvesFromSession(session);
+        if(flags.svg && flags.svgOut) {
+            const svg = generateSvg(curves);
+            Deno.writeTextFile(flags.svgOut, svg);
+        }
+        if(flags.pdf && flags.pdfOut) {
+            const pdf = await generatePdf(curves);
+            Deno.writeFile(flags.pdfOut, pdf);
+        }
+        Deno.writeTextFile("./tmpOut/Session.json", JSON.stringify(sessionObject, null, "\t"));
+        Deno.writeTextFile("./tmpOut/ResolvedSession.json", JSON.stringify(session, null, "\t"));
+        if(!flags.persistTemp) {
+            await removeTempDir();
+        }
+    } catch(err) {
+        console.error(err);
+        Deno.exit();
+    }    
 }
-
-const sessionBPList = await Deno.readFile(`${destPath}/${innerName}/Session.plist`);
-const sessionObject = parseBuffer(sessionBPList);
-const session = resolveObjects(sessionObject) as NoteTakingSession;
-// const curves = curvesFromSessionObject(sessionObject as SessionData);
-const curves = curvesFromSession(session);
-const svg = generateSvg(curves);
-// const pdf = await generatePdf(curves);
-Deno.writeTextFile("./out.svg", svg);
-// Deno.writeFile("./out.pdf", pdf);
-Deno.writeTextFile("./tmpOut/Session.json", JSON.stringify(sessionObject, null, "\t"));
-Deno.writeTextFile("./tmpOut/ResolvedSession.json", JSON.stringify(session, null, "\t"));
+main(Deno.args);
