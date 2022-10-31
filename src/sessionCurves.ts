@@ -2,7 +2,7 @@
 import { AnyObject } from "https://cdn.skypack.dev/-/chart.js@v3.7.1-M72rzhHM5HB6TMxMHjbt/dist=es2019,mode=types/types/basic.d.ts";
 import { color } from "https://deno.land/x/deplot@0.2.0/vendor/d3/d3.d.ts";
 import { Struct } from "https://deno.land/x/struct@1.0.0/mod.ts";
-import type { Curve, Coordinate } from  './types.ts'; 
+import type { Curve, Coordinate, NoteTakingSession } from  './types.ts'; 
 
 export type SessionData = {
     $objects: ({
@@ -95,7 +95,28 @@ const makeCurves = (coords: Coordinate[], numpoints: number[], uuids: string[], 
     return curves;
 }
 
-export function curvesFromSessionData (sessionData: SessionData): Curve[] {
+export function curvesFromSession (session: NoteTakingSession): Curve[] {
+    // let objectFound = false;
+    // let pointBytes: number[] = [];
+    const pointBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curvespoints
+    // let numPointBytes: number[] = [];
+    const numPointBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curvesnumpoints
+    // let uuidBytes: number[] = [];
+    const uuidBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curveUUIDs
+    // let colorBytes: number[] = [];
+    const colorBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curvescolors
+    const points = bytesToPoints(Uint8Array.from(pointBytes));
+    const numPoints = bytesToNumPoints(Uint8Array.from(numPointBytes));
+    const uuids = bytesToUUIDs(Uint8Array.from(uuidBytes));
+    const colors = bytesToColors(Uint8Array.from(colorBytes));
+    const coords = makeCoords(points);
+    const curves = makeCurves(coords, numPoints, uuids, colors);
+    // console.log(points.toString());
+    // displayCurvePlot(curves);
+    return curves
+}
+
+export function curvesFromSessionObject (sessionData: SessionData): Curve[] {
     let objectFound = false;
     // let pointBytes: number[] = [];
     let pointBytes: Uint8Array = new Uint8Array();

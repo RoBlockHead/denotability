@@ -19,5 +19,5 @@ export function resolveObjects(sessionData: any): any {
     });
     const newData = sessionData as any;
     newData.$objects = transformedObjects;
-    return newData.objects[1];
+    return newData.$objects[1];
 }
