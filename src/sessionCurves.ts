@@ -23,7 +23,7 @@ const numObjToArr = (input: {[key: string]: number}): number[] => {
 	}
 	return output;
 }
-const bytesToPoints = (bytes: Uint8Array): number[] => {
+const deserializePoints = (bytes: Uint8Array): number[] => {
     const points: number[] = [];
     for(let i = 0; i < bytes.length/4; i++) {
         let num: number[] = Struct.unpack("f32", bytes.slice(4*i, 4*i+4).reverse());
@@ -31,7 +31,7 @@ const bytesToPoints = (bytes: Uint8Array): number[] => {
     }
     return points;
 }
-const bytesToNumPoints = (bytes: Uint8Array): number[] => {
+const deserializeNumPoints = (bytes: Uint8Array): number[] => {
     const numPoints: number[] = [];
     for(let i = 0; i < bytes.length/4; i++) {
         let num: number[] = Struct.unpack("i32", bytes.slice(4*i, 4*i+4).reverse());
@@ -39,7 +39,7 @@ const bytesToNumPoints = (bytes: Uint8Array): number[] => {
     }
     return numPoints;
 }
-const bytesToUUIDs = (bytes: Uint8Array): string[] => {
+const deserializeUUIDs = (bytes: Uint8Array): string[] => {
     const uuids: string[] = [];
     for(let i = 0; i < bytes.length/16; i++) {
         let uuidParts: string[] = [];
@@ -55,7 +55,7 @@ const bytesToUUIDs = (bytes: Uint8Array): string[] => {
  * Converts an array of bytes into an array of hex RGBA color codes
  * @param bytes Uint8Array of bytes to convert to an array of colors
  */
-const bytesToColors = (bytes: Uint8Array): string[] => {
+const deserializeColors = (bytes: Uint8Array): string[] => {
     const colors: string[] = [];
     for(let i = 0; i < bytes.length/4; i++) {
         let colorParts: string[] = [];
@@ -65,6 +65,17 @@ const bytesToColors = (bytes: Uint8Array): string[] => {
         colors.push("#" + colorParts.join(""));
     }
     return colors;
+}
+const deserializeFractionalWidths = (bytes: Uint8Array): number[] => {
+    
+}
+function deserializeFloat32(bytes: Uint8Array): number[] {
+    const f32s: number[] = [];
+    for(let i = 0; i < bytes.length/4; i++) {
+        let num: number[] = Struct.unpack("f32", bytes.slice(4*i, 4*i+4).reverse());
+        f32s[i] = num[0]
+    }
+    return f32s;
 }
 const makeCoords = (points: number[]): Coordinate[] => {
     let coords: Coordinate[] = [];
@@ -78,15 +89,18 @@ const makeCoords = (points: number[]): Coordinate[] => {
     });
     return coords;
 }
-const makeCurves = (coords: Coordinate[], numpoints: number[], uuids: string[], colors: string[]): Curve[] => {
+
+const makeCurves = (coords: Coordinate[], numpoints: number[], uuids: string[], colors: string[], widths: number[]): Curve[] => {
     const curves: Curve[] = [];
     let offset = 0;
     for(let i = 0; i < numpoints.length; i++) {
         const curve: Curve = {
             uuid: uuids[i],
             color: colors[i],
+            width: widths[i],
             numPoints: numpoints[i],
-            points: []
+            points: [],
+
         };
         curve.points = coords.slice(offset, offset + numpoints[i]);
         offset += numpoints[i];
@@ -105,12 +119,13 @@ export function curvesFromSession (session: NoteTakingSession): Curve[] {
     const uuidBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curveUUIDs
     // let colorBytes: number[] = [];
     const colorBytes: Uint8Array = session.richText["Handwriting Overlay"].SpatialHash.curvescolors
-    const points = bytesToPoints(Uint8Array.from(pointBytes));
-    const numPoints = bytesToNumPoints(Uint8Array.from(numPointBytes));
-    const uuids = bytesToUUIDs(Uint8Array.from(uuidBytes));
-    const colors = bytesToColors(Uint8Array.from(colorBytes));
+    const points = deserializePoints(Uint8Array.from(pointBytes));
+    const numPoints = deserializeNumPoints(Uint8Array.from(numPointBytes));
+    const uuids = deserializeUUIDs(Uint8Array.from(uuidBytes));
+    const colors = deserializeColors(Uint8Array.from(colorBytes));
     const coords = makeCoords(points);
-    const curves = makeCurves(coords, numPoints, uuids, colors);
+    const curves = makeCurves(coords, numPoints, uuids, colors, deserializeFloat32(session.richText["Handwriting Overlay"].SpatialHash.curveswidth));
+
     // console.log(points.toString());
     // displayCurvePlot(curves);
     return curves
@@ -145,10 +160,10 @@ export function curvesFromSessionObject (sessionData: SessionData): Curve[] {
         // colorBytes = entry.curvescolors instanceof Uint8Array ? Array.from(entry.curvescolors) : numObjToArr(entry.curvescolors);
     }
     if(!objectFound) throw new Error("curve data not found in session data.");
-    const points = bytesToPoints(Uint8Array.from(pointBytes));
-    const numPoints = bytesToNumPoints(Uint8Array.from(numPointBytes));
-    const uuids = bytesToUUIDs(Uint8Array.from(uuidBytes));
-    const colors = bytesToColors(Uint8Array.from(colorBytes));
+    const points = deserializePoints(Uint8Array.from(pointBytes));
+    const numPoints = deserializeNumPoints(Uint8Array.from(numPointBytes));
+    const uuids = deserializeUUIDs(Uint8Array.from(uuidBytes));
+    const colors = deserializeColors(Uint8Array.from(colorBytes));
     const coords = makeCoords(points);
     const curves = makeCurves(coords, numPoints, uuids, colors);
     // console.log(points.toString());

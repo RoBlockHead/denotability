@@ -41,8 +41,9 @@ export const generatePathString = (curvePoints: {x: number, y: number}[]) => {
 }
 
 export const generateSvg = (curves: Curve[]): string => {
-    const width = 667.79998779296875;
-    const height = 11*(667.79998779296875/8.5);
+    // Assume Letter Paper for now.
+    const width = 612;
+    const height = 792;
 
     let polyLineElements: string[] = [];
     curves.forEach((val) => {
@@ -52,7 +53,7 @@ export const generateSvg = (curves: Curve[]): string => {
             pointsString += `${x} ${y}, `
         });
         // polyLineElements.push(`<polyline points="${pointsString}" fill="none" stroke="${val.color}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
-        polyLineElements.push(`<path d="${generatePathString(val.points)}"  fill="none" stroke="${val.color.substring(0,7)}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>`);
+        polyLineElements.push(`<path d="${generatePathString(val.points)}"  fill="none" stroke="${val.color.substring(0,7)}" stroke-width="${val.width}" stroke-linecap="round" stroke-linejoin="round"/>`);
     
     });
     

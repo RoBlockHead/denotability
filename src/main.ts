@@ -54,6 +54,7 @@ async function main(args: string[]) {
             string: ["pdfOut", "svgOut"],
             default: { pdf: true, svg: true }
         });
+        // console.log(flags);
         const inputPath = flags._[0]
         if(flags.pdf && !flags.pdfOut) throw new Error("specify the path for the outputted PDF file");
         if(flags.svg && !flags.svgOut) throw new Error("specify the path for the outputted SVG file");
@@ -93,6 +94,7 @@ async function main(args: string[]) {
         }
         Deno.writeTextFile("./tmpOut/Session.json", JSON.stringify(sessionObject, null, "\t"));
         Deno.writeTextFile("./tmpOut/ResolvedSession.json", JSON.stringify(session, null, "\t"));
+        Deno.writeTextFile("./tmpOut/Curves.json", JSON.stringify(curves, null, "\t"));
         if(!flags.persistTemp) {
             await removeTempDir();
         }
